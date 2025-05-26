@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+.git
+alembic/versions/
+resources/*  # Optional: if you mount it or keep it clean
+tests/

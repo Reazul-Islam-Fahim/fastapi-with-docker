@@ -1,0 +1,6 @@
+venv
+__pycache__
+db_url
+alembic.ini
+resources
+resources/*

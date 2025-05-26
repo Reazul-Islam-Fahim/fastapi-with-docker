@@ -1,0 +1,122 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from fastapi import HTTPException, status
+from models.sub_categories.sub_categories import SubCategories
+from schemas.sub_categories.sub_categories import SubCategoriesSchema
+from sqlalchemy.exc import SQLAlchemyError
+
+
+async def get_sub_category_by_id(db: AsyncSession, id: int):
+    try:
+        result = await db.execute(select(SubCategories).where(SubCategories.id == id))
+        db_sub_categories = result.scalar_one_or_none()
+
+        response = {
+            "id": db_sub_categories.id,
+            "category_id": db_sub_categories.category_id,
+            "name": db_sub_categories.name,
+            "description": db_sub_categories.description,
+            "image": db_sub_categories.image,
+            "is_active": db_sub_categories.is_active
+        }
+        
+        # return
+    
+        return response
+    
+    except Exception as e:
+        print("DB Error:", e)
+        raise HTTPException(status_code=404, detail="Sub categories is not found...")
+
+
+async def get_all_sub_categories(db: AsyncSession, skip: int = 0, limit: int = 10):
+    result = await db.execute(
+        select(SubCategories).offset(skip).limit(limit)
+    )
+    all_sub_categories = result.scalars().all()
+    
+    return [
+        {
+            "id": sub_categories.id,
+            "category_id": sub_categories.category_id,
+            "name": sub_categories.name,
+            "description": sub_categories.description,
+            "image": sub_categories.image,
+            "is_active": sub_categories.is_active
+        }
+        for sub_categories in all_sub_categories
+    ]
+
+
+
+async def update_sub_category(
+    db: AsyncSession,
+    id: int,
+    sub_category_data: SubCategoriesSchema,
+    filePath: str
+):
+    result = await db.execute(select(SubCategories).where(SubCategories.id == id))
+    db_sub_category = result.scalar_one_or_none()
+
+    if not db_sub_category:
+        raise HTTPException(status_code=404, detail="Sub Category is not found")
+
+    db_sub_category.name = sub_category_data.name
+    db_sub_category.category_id = sub_category_data.category_id
+    db_sub_category.description = sub_category_data.description
+    db_sub_category.image = filePath
+    db_sub_category.is_active = sub_category_data.is_active
+
+    await db.commit()
+    await db.refresh(db_sub_category)
+
+    
+
+    category_response = {
+        "name": db_sub_category.name,
+        "category_id": db_sub_category.category_id,
+        "description": db_sub_category.description,
+        "image": db_sub_category.image,
+        "is_active": db_sub_category.is_active
+    }
+
+    return category_response
+
+async def create_sub_category(
+    db: AsyncSession, 
+    sub_category_data: SubCategoriesSchema,
+    filePath: str
+):
+    try:
+        result = await db.execute(
+            select(SubCategories).where(SubCategories.name == sub_category_data.name)
+        )
+        existing_sub_category = result.scalar_one_or_none()
+        
+        if existing_sub_category:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Sub Category with this name already exists"
+            )
+
+        new_sub_category = SubCategories(
+            name=sub_category_data.name,
+            category_id = sub_category_data.category_id,
+            description=sub_category_data.description,
+            image=filePath,
+            is_active=sub_category_data.is_active
+        )
+        
+
+        db.add(new_sub_category)
+        await db.commit()
+        await db.refresh(new_sub_category)
+        
+        return new_sub_category
+
+    except SQLAlchemyError as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error: {str(e)}"
+        )
