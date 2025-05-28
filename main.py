@@ -10,7 +10,7 @@ from routes.vendor import vendors
 from routes.bank_details import bank_details
 from routes.best_seller import best_seller
 from routes.product_features import product_features
-
+from routes.products import products
 from fastapi.staticfiles import StaticFiles
 
 async def init_models():
@@ -50,3 +50,4 @@ app.include_router(vendors.router)
 app.include_router(bank_details.router)
 app.include_router(best_seller.router)
 app.include_router(product_features.router)
+app.include_router(products.router)

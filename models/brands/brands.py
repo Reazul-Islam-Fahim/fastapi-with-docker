@@ -13,3 +13,5 @@ class Brands(Base):
     created_at = Column(String(50), nullable=False, server_default=func.now())
     updated_at = Column(String(50), nullable=False, server_default=func.now(), onupdate=func.now())
     
+    products = relationship("Products", back_populates="brands")
+    

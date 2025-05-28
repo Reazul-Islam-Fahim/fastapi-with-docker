@@ -1,35 +1,10 @@
-import base64
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi import HTTPException, status
 from models.vendor.vendors import Vendors
 from schemas.vendor.vendors import VendorsSchema
 from sqlalchemy.exc import SQLAlchemyError
-
-
-# async def get_vendor_by_id(db: AsyncSession, id: int):
-#     result = await db.execute(select(Vendors).where(Vendors.id == id))
-#     vendors = result.scalar_one_or_none()
-
-#     response = {
-#         "id": vendors.id,
-#         "store_name": vendors.store_name,
-#         "documents": vendors.documents,
-#         "business_address": vendors.business_address,
-#         "pick_address": vendors.pick_address,
-#         "logo": vendors.logo,
-#         "vendor_slug": vendors.vendor_slug,
-#         "is_active": vendors.is_active,
-#         "is_verified": vendors.is_verified,
-#         "is_shipping_enabled": vendors.is_shipping_enabled,
-#         "default_shipping_rate": vendors.default_shipping_rate,
-#         "free_shipping_threshold": vendors.free_shipping_threshold,
-#         "total_sales": vendors.total_sales,
-#         "total_orders": vendors.total_orders,
-#         "last_order_date": vendors.last_order_date
-#     }
-    
-#     return response
+from utils.slug import generate_unique_slug
 
 async def get_vendor_by_id(db: AsyncSession, id: int) -> VendorsSchema:
     result = await db.execute(select(Vendors).where(Vendors.id == id))
@@ -81,13 +56,15 @@ async def update_vendor(
 
     if not db_vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    new_slug = await generate_unique_slug(db, vendor_data.vendor_slug)
 
     db_vendor.store_name = vendor_data.store_name
     db_vendor.documents = vendor_data.documents
     db_vendor.business_address = vendor_data.business_address
     db_vendor.pick_address = vendor_data.pick_address
     db_vendor.logo = filePath
-    db_vendor.vendor_slug = vendor_data.vendor_slug
+    db_vendor.vendor_slug = new_slug
     db_vendor.is_active = vendor_data.is_active
     db_vendor.is_verified = vendor_data.is_verified
     db_vendor.is_shipping_enabled = vendor_data.is_shipping_enabled
@@ -118,6 +95,8 @@ async def create_vendor(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Vendor with this user details already exists"
             )
+            
+        new_slug = await generate_unique_slug(db, vendor_data.store_name)
 
         new_category = Vendors(
             user_id=vendor_data.user_id,
@@ -126,7 +105,7 @@ async def create_vendor(
             business_address=vendor_data.business_address,
             pick_address=vendor_data.pick_address,
             logo=filePath,
-            vendor_slug=vendor_data.vendor_slug,
+            vendor_slug=new_slug,
             is_active=vendor_data.is_active,
             is_verified=vendor_data.is_verified,
             is_shipping_enabled=vendor_data.is_shipping_enabled,

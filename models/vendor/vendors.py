@@ -26,3 +26,4 @@ class Vendors(Base):
     users = relationship("Users", back_populates="vendors")
     bank_details = relationship("BankDetails", back_populates="vendors")
     best_seller = relationship("BestSeller", back_populates="vendors")
+    products = relationship("Products", back_populates="vendors")
