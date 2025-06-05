@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Form, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
-from crud.categories.categories import get_category_by_id, get_all_categories, get_sub_category_by_category_id, update_category, create_category
+from crud.categories.categories import get_products_by_category_id, get_category_by_id, get_all_categories, get_sub_category_by_category_id, update_category, create_category
 from database.db import get_db
 from schemas.categories.categories import CategoriesSchema
 from typing import Optional
@@ -30,6 +30,16 @@ async def get_category_by_id_data(id: int, db: AsyncSession = Depends(get_db)):
 @router.get("/get_sub_categories/{category_id}")
 async def read_subcategories_by_category(category_id: int, db: AsyncSession = Depends(get_db)):
     return await get_sub_category_by_category_id(db, category_id)
+
+
+
+@router.get("/{category_id}/products")
+async def get_products_by_category(
+    category_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    return await get_products_by_category_id(db, category_id)
+
 
 
 

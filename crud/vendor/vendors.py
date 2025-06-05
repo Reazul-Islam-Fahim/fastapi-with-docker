@@ -44,40 +44,58 @@ async def get_all_vendors(db: AsyncSession, skip: int = 0, limit: int = 10):
     ]
 
 
-
 async def update_vendor(
     db: AsyncSession,
     id: int,
     vendor_data: VendorsSchema,
     filePath: str
 ):
-    result = await db.execute(select(Vendors).where(Vendors.id == id))
-    db_vendor = result.scalar_one_or_none()
+    try:
+        result = await db.execute(select(Vendors).where(Vendors.id == id))
+        db_vendor = result.scalar_one_or_none()
 
-    if not db_vendor:
-        raise HTTPException(status_code=404, detail="Vendor not found")
-    
-    new_slug = await generate_unique_slug(db, vendor_data.vendor_slug)
+        if not db_vendor:
+            raise HTTPException(status_code=404, detail="Vendor not found")
 
-    db_vendor.store_name = vendor_data.store_name
-    db_vendor.documents = vendor_data.documents
-    db_vendor.business_address = vendor_data.business_address
-    db_vendor.pick_address = vendor_data.pick_address
-    db_vendor.logo = filePath
-    db_vendor.vendor_slug = new_slug
-    db_vendor.is_active = vendor_data.is_active
-    db_vendor.is_verified = vendor_data.is_verified
-    db_vendor.is_shipping_enabled = vendor_data.is_shipping_enabled
-    db_vendor.default_shipping_rate = vendor_data.default_shipping_rate
-    db_vendor.free_shipping_threshold = vendor_data.free_shipping_threshold
-    db_vendor.total_sales = vendor_data.total_sales
-    db_vendor.total_orders = vendor_data.total_orders
-    db_vendor.last_order_date = vendor_data.last_order_date    
+        new_slug = await generate_unique_slug(db, vendor_data.vendor_slug)
 
-    await db.commit()
-    await db.refresh(db_vendor)
+        db_vendor.store_name = vendor_data.store_name
+        db_vendor.documents = vendor_data.documents
+        db_vendor.business_address = vendor_data.business_address
+        db_vendor.pick_address = vendor_data.pick_address
+        db_vendor.logo = filePath
+        db_vendor.vendor_slug = new_slug
+        db_vendor.is_active = vendor_data.is_active
+        db_vendor.is_verified = vendor_data.is_verified
+        db_vendor.is_shipping_enabled = vendor_data.is_shipping_enabled
+        db_vendor.default_shipping_rate = vendor_data.default_shipping_rate
+        db_vendor.free_shipping_threshold = vendor_data.free_shipping_threshold
+        db_vendor.total_sales = vendor_data.total_sales
+        db_vendor.total_orders = vendor_data.total_orders
+        db_vendor.last_order_date = vendor_data.last_order_date    
 
-    return db_vendor
+        await db.commit()
+        await db.refresh(db_vendor)
+
+        return db_vendor
+
+    except HTTPException:
+        raise  # re-raise known exceptions like 404
+
+    except SQLAlchemyError as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error: {str(e)}"
+        )
+
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected error: {str(e)}"
+        )
+
 
 async def create_vendor(
     db: AsyncSession, 

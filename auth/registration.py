@@ -19,10 +19,7 @@ async def register_user(db: AsyncSession, user: UserSchema) -> Users:
         existing_user = result.scalar_one_or_none()
         
         if existing_user:
-            raise HTTPException(
-                status_code=409,
-                detail="Email already registered"
-            )
+            return None
 
         new_user = Users(
             name=user.name,
@@ -52,7 +49,9 @@ async def register_user(db: AsyncSession, user: UserSchema) -> Users:
 
 async def send_verification_email(email: str):
     token = create_email_verification_token(email)
-    verification_url = f"{settings.BASE_URL}/auth/verify-email?token={token}"
+    # verification_url = f"{settings.BASE_URL}/auth/verify-email?token={token}"
+    
+    verification_url = f"http://www.localhost:3000/auth/verify-email?token={token}"
     
     message = MIMEText(
         f"Please verify your email by clicking: {verification_url}\n\n"

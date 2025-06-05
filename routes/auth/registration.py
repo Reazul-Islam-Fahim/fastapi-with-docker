@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.users.users import Users
@@ -18,20 +19,24 @@ async def register(
     try:
         new_user = await register_user(db, user)
 
+        if not new_user:
+            return JSONResponse(
+                status_code=409,
+                content={"success": False, "message": "Email already registered."}
+            )
+
         background_tasks.add_task(send_verification_email, new_user.email)
 
         return {
+            "success": True,
             "message": "Registration successful. Please check your email to verify your account."
         }
 
-    except HTTPException as e:
-        await db.rollback()
-        raise
     except Exception as e:
         await db.rollback()
-        raise HTTPException(
+        return JSONResponse(
             status_code=500,
-            detail=f"Internal server error: {str(e)}"
+            content={"success": False, "message": f"Internal server error: {str(e)}"}
         )
 
 @router.get("/verify-email")

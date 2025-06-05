@@ -44,34 +44,53 @@ async def get_all_brands(db: AsyncSession, skip: int = 0, limit: int = 10):
     ]
 
 
+from sqlalchemy.exc import SQLAlchemyError
+
 async def update_brand(
     db: AsyncSession,
     id: int,
     brand_data: BrandSchema,
     filePath: str
 ):
-    result = await db.execute(select(Brands).where(Brands.id == id))
-    db_brand_data = result.scalar_one_or_none()
+    try:
+        result = await db.execute(select(Brands).where(Brands.id == id))
+        db_brand_data = result.scalar_one_or_none()
 
-    if not db_brand_data:
-        raise HTTPException(status_code=404, detail="Brand is not found")
+        if not db_brand_data:
+            raise HTTPException(status_code=404, detail="Brand not found")
 
-    db_brand_data.name = brand_data.name
-    db_brand_data.description = brand_data.description
-    db_brand_data.image = filePath
-    db_brand_data.is_active = brand_data.is_active
+        db_brand_data.name = brand_data.name
+        db_brand_data.description = brand_data.description
+        db_brand_data.image = filePath
+        db_brand_data.is_active = brand_data.is_active
 
-    await db.commit()
-    await db.refresh(db_brand_data)
+        await db.commit()
+        await db.refresh(db_brand_data)
 
-    category_response = {
-        "name": db_brand_data.name,
-        "description": db_brand_data.description,
-        "image": db_brand_data.image,
-        "is_active": db_brand_data.is_active
-    }
+        brand_response = {
+            "name": db_brand_data.name,
+            "description": db_brand_data.description,
+            "image": db_brand_data.image,
+            "is_active": db_brand_data.is_active
+        }
 
-    return category_response
+        return brand_response
+
+    except HTTPException:
+        raise  # Re-raise to preserve 404
+    except SQLAlchemyError as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error: {str(e)}"
+        )
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected error: {str(e)}"
+        )
+
 
 
 async def create_brand(

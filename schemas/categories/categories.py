@@ -7,7 +7,7 @@ class CategoriesSchema(BaseModel):
     name: str
     description: Optional[str]
     is_active: bool = True
-    sub_categories: List[SubCategoriesSchema]
+    sub_categories: Optional[List[SubCategoriesSchema]] = None
     
     class Config:
         orm_mode = True

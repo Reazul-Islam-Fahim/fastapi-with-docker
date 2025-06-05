@@ -1,8 +1,7 @@
 from sqlalchemy.exc import SQLAlchemyError
-from fastapi import status
+from fastapi import status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from fastapi import HTTPException
 from models.bank_details.bank_details import BankDetails
 from schemas.bank_details.bank_details import BankDetailsSchema
 
@@ -42,26 +41,39 @@ async def update_bank_details(
     id: int, 
     bank_details: BankDetailsSchema
 ):
-    result = await db.execute(select(BankDetails).where(BankDetails.id == id))
-    db_bank_details = result.scalar_one_or_none()
+    try:
+        result = await db.execute(select(BankDetails).where(BankDetails.id == id))
+        db_bank_details = result.scalar_one_or_none()
 
-    if not db_bank_details:
-        raise HTTPException(status_code=404, detail="Bank details not found")
+        if not db_bank_details:
+            raise HTTPException(status_code=404, detail="Bank details not found")
 
-    db_bank_details.bank_account_name = bank_details.bank_account_name
-    db_bank_details.bank_account_number = bank_details.bank_account_number
-    db_bank_details.bank_name = bank_details.bank_name
-    db_bank_details.branch_name = bank_details.branch_name
-    db_bank_details.ifsc_code = bank_details.ifsc_code
-    db_bank_details.paypal_email = bank_details.paypal_email
-    db_bank_details.payout_pref = bank_details.payout_pref
-    db_bank_details.is_active = bank_details.is_active
+        db_bank_details.bank_account_name = bank_details.bank_account_name
+        db_bank_details.bank_account_number = bank_details.bank_account_number
+        db_bank_details.bank_name = bank_details.bank_name
+        db_bank_details.branch_name = bank_details.branch_name
+        db_bank_details.ifsc_code = bank_details.ifsc_code
+        db_bank_details.paypal_email = bank_details.paypal_email
+        db_bank_details.payout_pref = bank_details.payout_pref
+        db_bank_details.is_active = bank_details.is_active
 
-    await db.commit()
-    await db.refresh(db_bank_details)
+        await db.commit()
+        await db.refresh(db_bank_details)
 
-    return db_bank_details
+        return db_bank_details
 
+    except SQLAlchemyError as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error: {str(e)}"
+        )
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unexpected error: {str(e)}"
+        )
 
 async def create_bank_details(db: AsyncSession, bank_data: BankDetailsSchema):
     try:
@@ -88,4 +100,10 @@ async def create_bank_details(db: AsyncSession, bank_data: BankDetailsSchema):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Database error: {str(e)}"
+        )
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unexpected error: {str(e)}"
         )

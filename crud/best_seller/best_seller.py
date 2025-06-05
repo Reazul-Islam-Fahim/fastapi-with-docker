@@ -6,6 +6,21 @@ from models.best_seller.best_seller import BestSeller
 from schemas.best_seller.best_seller import BestSellerSchema
 from models.vendor.vendors import Vendors
 
+
+
+async def get_best_seller_by_id(db: AsyncSession, id: int):
+    result = await db.execute(select(BestSeller).where(BestSeller.id == id))
+    best_seller = result.scalar_one_or_none()
+    if not best_seller:
+        raise HTTPException(status_code=404, detail="Best seller not found")
+    return best_seller
+
+async def get_all_best_sellers(db: AsyncSession, skip: int = 0, limit: int = 10):
+    result = await db.execute(select(BestSeller).offset(skip).limit(limit))
+    return result.scalars().all()
+
+
+
 async def create_best_seller(db: AsyncSession, vendor_id: int):
     try:
         result = await db.execute(
@@ -42,17 +57,6 @@ async def create_best_seller(db: AsyncSession, vendor_id: int):
             detail=f"Database error: {str(e)}"
         )
 
-
-async def get_best_seller_by_id(db: AsyncSession, id: int):
-    result = await db.execute(select(BestSeller).where(BestSeller.id == id))
-    best_seller = result.scalar_one_or_none()
-    if not best_seller:
-        raise HTTPException(status_code=404, detail="Best seller not found")
-    return best_seller
-
-async def get_all_best_sellers(db: AsyncSession, skip: int = 0, limit: int = 10):
-    result = await db.execute(select(BestSeller).offset(skip).limit(limit))
-    return result.scalars().all()
 
 
 async def update_best_seller(db: AsyncSession, id: int, vendor_id: int):

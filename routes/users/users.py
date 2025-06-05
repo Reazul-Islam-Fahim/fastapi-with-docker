@@ -7,6 +7,7 @@ from database.db import get_db
 from schemas.users.users import UpdateUserSchema
 import os
 import shutil
+from datetime import datetime
 
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -15,13 +16,34 @@ UPLOAD_DIR = "resources/users"
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+
 @router.get("")
 async def get_all_users(
-    skip: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1),
-    db: AsyncSession = Depends(get_db)
+    search: Optional[str] = None,
+    user_id: Optional[int] = None,
+    status: Optional[bool] = None,
+    created_from: Optional[datetime] = Query(None),
+    created_to: Optional[datetime] = Query(None),
+    sort_by: str = Query("created_at", enum=["created_at", "name"]),
+    sort_order: str = Query("desc", enum=["asc", "desc"])
 ):
-    return await get_users(db, skip, limit)
+    return await get_users(
+        db=db,
+        page=page,
+        limit=limit,
+        search=search,
+        user_id=user_id,
+        status=status,
+        created_from=created_from,
+        created_to=created_to,
+        sort_by=sort_by,
+        sort_order=sort_order
+    )
+
+
 
 @router.get("/{user_id}")
 async def get_user_by_id(user_id: int, db: AsyncSession = Depends(get_db)):

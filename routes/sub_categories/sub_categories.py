@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Form, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
-from crud.sub_categories.sub_categories import get_sub_category_by_id, get_all_sub_categories, update_sub_category, create_sub_category
+from crud.sub_categories.sub_categories import get_products_by_sub_category_id, get_sub_category_by_id, get_all_sub_categories, update_sub_category, create_sub_category
 from database.db import get_db
 from schemas.sub_categories.sub_categories import SubCategoriesSchema
 from typing import Optional
@@ -92,3 +92,11 @@ async def create_sub_category_data(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error: {str(e)}"
         )
+        
+        
+@router.get("/{id}/products")
+async def get_products_by_sub_category(
+    id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    return await get_products_by_sub_category_id(db, id)

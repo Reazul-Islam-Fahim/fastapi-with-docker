@@ -1,9 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi import HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
 from models.product_features.product_features import ProductFeatures
 from schemas.product_features.product_features import ProductFeaturesSchema
-from sqlalchemy.exc import SQLAlchemyError
 
 
 async def get_product_feature_by_id(db: AsyncSession, id: int):
@@ -18,10 +18,10 @@ async def get_product_feature_by_id(db: AsyncSession, id: int):
 
     except HTTPException:
         raise  
-
     except Exception as e:
-        print("DB Error:", repr(e))
+        print("DB Error (Get by ID):", repr(e))
         raise HTTPException(status_code=500, detail="Error retrieving product feature.")
+
 
 async def get_all_product_features(db: AsyncSession, skip: int = 0, limit: int = 10):
     try:
@@ -33,7 +33,7 @@ async def get_all_product_features(db: AsyncSession, skip: int = 0, limit: int =
         return features
 
     except Exception as e:
-        print("DB Error:", e)
+        print("DB Error (Get all):", repr(e))
         raise HTTPException(status_code=500, detail="Error retrieving product features.")
 
 
@@ -51,10 +51,19 @@ async def create_product_feature(db: AsyncSession, feature: ProductFeaturesSchem
 
         return new_feature
 
-    except Exception as e:
+    except SQLAlchemyError as e:
+        await db.rollback()
         print("DB Error (Create):", repr(e))
-        raise HTTPException(status_code=500, detail="Error creating product feature.")
-    
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error during creation: {str(e)}"
+        )
+    except Exception as e:
+        await db.rollback()
+        print("Unexpected Error (Create):", repr(e))
+        raise HTTPException(status_code=500, detail="Unexpected error while creating product feature.")
+
+
 async def update_product_feature(db: AsyncSession, id: int, feature: ProductFeaturesSchema):
     try:
         result = await db.execute(select(ProductFeatures).where(ProductFeatures.id == id))
@@ -75,6 +84,14 @@ async def update_product_feature(db: AsyncSession, id: int, feature: ProductFeat
 
     except HTTPException:
         raise
-    except Exception as e:
+    except SQLAlchemyError as e:
+        await db.rollback()
         print("DB Error (Update):", repr(e))
-        raise HTTPException(status_code=500, detail="Error updating product feature.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error during update: {str(e)}"
+        )
+    except Exception as e:
+        await db.rollback()
+        print("Unexpected Error (Update):", repr(e))
+        raise HTTPException(status_code=500, detail="Unexpected error while updating product feature.")
